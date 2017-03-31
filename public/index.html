@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chat by Alex</title>
+  <script src="https://cdn.firebase.com/libs/firebaseui/1.0.0/firebaseui.js"></script>
+  <script data-main="scripts/main" src="scripts/require.min.js"></script>
+  <link type="text/css" rel="stylesheet" href="https://cdn.firebase.com/libs/firebaseui/1.0.0/firebaseui.css" />
+  <link rel="stylesheet" type="text/css" href="styles/bootstrap.min.css">
+  <link rel="stylesheet" type="text/css" href="styles/style.css">
+</head>
+
+<body>
+  <div id="auth"></div>
+  <div id="content">
+    <form id="room" onsubmit="return false;">
+      <input type="text" id="roomname" placeholder="the room name" onchange="onRoomChange(); return false;" />
+    </form>
+    <div id="history">
+      <p>Loading...</p>
+      <p></p>
+    </div>
+    <form id="chatroom" onsubmit="onSubmit(); return false;">
+      <p><input type="text" id="message" placeholder="Your message" /></p>
+    </form>
+  </div>
+  <script src="https://www.gstatic.com/firebasejs/3.7.2/firebase.js"></script>
+</body>
+
+</html>
