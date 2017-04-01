@@ -1,6 +1,6 @@
 "use strict";
 
-define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'sanity', 'roomnamer'], function (pubsub, config, querystring, logger, preferences, user, sanity, roomnamer) {
+define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'sanity', 'roomnamer', 'RoomInformation'], function (pubsub, config, querystring, logger, preferences, user, sanity, roomnamer, RoomInformation) {
 
   firebase.initializeApp(config);
 
@@ -11,7 +11,7 @@ define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'san
         return false;
       },
       uiShown: function () {
-        pubsub.publish('firebase.login.shown')
+        pubsub.publish('firebase.login.shown');
       }
     },
     signInOptions: [
@@ -38,7 +38,7 @@ define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'san
   pubsub.subscribe("user.loggedin", function (fUser) {
     var updates = {};
     var now = new Date();
-    var key = "/login/" + now.getUTCFullYear() + "/" + now.getUTCMonth() + "/" + now.getUTCDate() + "/" + now.getUTCHours() + ":" + now.getUTCMinutes() + ":" + now.getUTCSeconds();
+    var key = "/login/" + now.toISOString().split('.')[0] + "Z"; // iso without milliseconds
     updates[key] = {
       displayName: fUser.displayName,
       email: fUser.email
@@ -53,8 +53,9 @@ define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'san
     document.getElementById("auth").style.visibility = "hidden";
     document.getElementById("content").style.visibility = "visible";
 
-    var defaultRoom = roomnamer.get(user.displayName);
-    var room = preferences.getRoomOrDefault();
+    var defaultRoom = new RoomInformation(roomnamer.get(user.displayName), sanity.username(user.displayName));
+    var room = preferences.getRoomOrDefault(defaultRoom);
+
     pubsub.publish("room.change.requested", room);
   });
 
@@ -66,43 +67,46 @@ define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'san
 
   var subscription;
 
-  pubsub.subscribe("room.change.requested", function (rName) {
+  pubsub.subscribe("room.change.requested", function (roomInformation) {
     logger.info("room.change.requested:");
-    logger.info(rName);
+    logger.info(roomInformation);
 
-    if (rName) {
-      if (rName.trim().length > 0) {
-        pubsub.publish("room.change.successful", rName);
-      }
+    if (roomInformation) {
+      pubsub.publish("room.change.successful", roomInformation);
+      return;
     }
 
-    pubsub.publish("room.change.failed", rName);
+    pubsub.publish("room.change.failed", roomInformation);
   });
 
-  pubsub.subscribe("room.change.successful", function (rName) {
+  pubsub.subscribe("room.change.successful", function (roomInformation) {
     document.getElementById("history").innerHTML = "";
-    document.getElementById("roomname").value = rName;
+    document.getElementById("roomname").value = roomInformation.displayName;
   });
 
-  pubsub.subscribe("room.change.successful", function (rName) {
-    logger.info("Changing rooms to " + rName);
+  pubsub.subscribe("room.change.successful", function (roomInformation) {
+    logger.info("Changing rooms:");
+    logger.info(roomInformation);
+
     if (subscription && subscription.off) {
       subscription.off();
     }
 
-    var chatroomReference = firebase.database().ref("/chatroom/" + rName + "/messages/");
+    var chatroomReference = firebase.database().ref("/chatroom/" + roomInformation.path + "/messages/");
     subscription = chatroomReference.on('value', function (e) {
       logger.info("new room data:");
       logger.info(e.val());
       pubsub.publish("room.data.available", e.val());
     });
 
-    logger.info("Subscribed to chatroom: " + rName);
+    logger.info("Successfully changed room");
   });
 
-  pubsub.subscribe("room.change.successful", function (rName) {
-    preferences.setRoom(rName);
-    logger.info("Set room name to " + rName);
+
+  pubsub.subscribe("room.change.successful", function (roomInformation) {
+    preferences.setRoom(roomInformation);
+    logger.info("Room changed successfully:");
+    logger.info(roomInformation);
   });
 
   pubsub.subscribe("room.data.available", function (data) {
@@ -138,7 +142,8 @@ define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'san
 
   pubsub.subscribe("room.post.requested", function (body) {
 
-    var roomName = preferences.getRoomOrDefault(sanity.username(user.displayName));
+    var defaultRoom = new RoomInformation(roomnamer.get(user.displayName), sanity.username(user.displayName));
+    var room = preferences.getRoomOrDefault(defaultRoom);
     var epoch = (new Date()).getTime();
 
     if (body && body.trim().length > 0) {
@@ -150,7 +155,7 @@ define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'san
       };
 
       var updates = {};
-      updates["/chatroom/" + roomName + "/messages/" + epoch] = postData;
+      updates["/chatroom/" + room.path + "/messages/" + epoch] = postData;
       var result = firebase.database().ref().update(updates);
       logger.info(result);
 
@@ -167,8 +172,8 @@ define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'san
 
   window.onRoomChange = function () {
     var roomname = document.getElementById("roomname").value.trim();
-    var rName = roomnamer.get(roomname, user.displayName);
-    pubsub.publish("room.change.requested", rName);
+    var path = roomnamer.get(roomname, user.displayName);
+    pubsub.publish("room.change.requested", new RoomInformation(path, roomname));
   };
 
   window.onSubmit = function () {

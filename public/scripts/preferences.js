@@ -1,4 +1,4 @@
-define(['logger'], function (logger) {
+define(['logger', 'RoomInformation'], function (logger, RoomInformation) {
 
   function setCookie(cname, cvalue, exdays) {
     var d = new Date();
@@ -23,16 +23,17 @@ define(['logger'], function (logger) {
   };
 
   return {
-    getRoomOrDefault: function (rName) {
-      var cValue = getCookie('room');
-      logger.info(cValue);
-      if(cValue == null || cValue.trim().length == 0) {
-        return rName;
-      };
-      return cValue;
+    getRoomOrDefault: function (defaultRoom) {
+      var path = getCookie('room.path');
+      var displayName = getCookie('room.displayName');
+      if(displayName && path) {
+        return new RoomInformation(path, displayName);
+      }
+      return defaultRoom;
     },
-    setRoom: function(rName) {
-      setCookie('room', rName);
+    setRoom: function(room) {
+      setCookie('room.displayName', room.displayName);
+      setCookie('room.path', room.path);
     }
   }
 
