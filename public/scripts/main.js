@@ -1,6 +1,6 @@
 "use strict";
 
-define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'sanity', 'roomnamer', 'RoomInformation'], function (pubsub, config, querystring, logger, preferences, user, sanity, roomnamer, RoomInformation) {
+define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'sanity', 'roomnamer', 'RoomInformation', 'moment'], function (pubsub, config, querystring, logger, preferences, user, sanity, roomnamer, RoomInformation, moment) {
 
   firebase.initializeApp(config);
 
@@ -81,15 +81,23 @@ define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'san
 
         document.getElementById("history").innerHTML = "";
 
-        if (subscription && subscription.off) {
-          subscription.off();
+        if (childAddedSubscription && childAddedSubscription.off) {
+          childAddedSubscription.off();
+        }
+
+        if (childChangedSubscription && childChangedSubscription.off) {
+          childChangedSubscription.off();
+        }
+
+        if (childRemovedSubscription && childRemovedSubscription.off) {
+          childRemovedSubscription.off();
         }
 
         var chatroomReference = firebase.database().ref("/chatroom/" + roomInformation.path + "/messages/").limitToLast(10);
         chatroomReference.on('child_added', function (data) {
           logger.info("child_added");
           logger.info(data.val());
-          pubsub.publish("room.data.available", data.val());
+          pubsub.publish("room.data.row.available", data.val());
         });
         chatroomReference.on('child_changed', function (data) {
           logger.info("child_changed");
@@ -146,14 +154,13 @@ define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'san
       return;
     }
 
-
     var element = document.getElementById("history");
     var id = new Date(data.utc).getTime();
 
     var formattedDate = new Date(data.utc).toDateString();
     var classes = data.from == user.displayName ? "me" : "";
     var content = "<blockquote id=" + id + " class=" + classes + ">" + data.body;
-    content += "<footer>" + data.from + " on " + formattedDate + "</footer></blockquote>"
+    content += "<footer>" + data.from + " on <span class=\"moment\" data-moment=\"" + data.utc + "\">" + formattedDate + "</span></footer></blockquote>"
 
     element.innerHTML = element.innerHTML + content;
     document.getElementById("" + id).scrollIntoView();
@@ -199,5 +206,21 @@ define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'san
     var message = document.getElementById('message').value.trim();
     pubsub.publish("room.post.requested", message);
   };
+
+  window.onload = function () {
+    setInterval(function() { pubsub.publish("timers.seconds.each"); }, 1000);
+  };
+
+  pubsub.subscribe("timers.seconds.each", function () {
+    var moments = document.getElementsByClassName("moment");
+    if (moments.length > 0) {
+      Array.prototype.forEach.call(moments, function(element) {
+        var raw = element.getAttribute("data-moment");
+        if (!isNaN(raw)) {
+          element.innerHTML = moment(parseInt(raw)).fromNow();
+        }
+      });
+    }
+  });
 
 });
