@@ -82,6 +82,7 @@ define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'san
   pubsub.subscribe("room.change.successful", function (roomInformation) {
     document.getElementById("history").innerHTML = "";
     document.getElementById("roomname").value = roomInformation.displayName;
+    document.getElementById("message").focus();
   });
 
   pubsub.subscribe("room.change.successful", function (roomInformation) {
