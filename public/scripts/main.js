@@ -65,13 +65,13 @@ define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'san
     document.getElementById("content").style.visibility = "hidden";
   });
 
-  var subscription;
+  var childAddedSubscription, childChangedSubscription, childRemovedSubscription;
 
   pubsub.subscribe("room.change.requested", function (roomInformation) {
     logger.info("room.change.requested:");
     logger.info(roomInformation);
 
-    if(roomInformation.displayName == "") {
+    if (roomInformation.displayName == "") {
       roomInformation.displayName = user.displayName;
       roomInformation.path = roomnamer.get(user.displayName);
     }
@@ -85,12 +85,26 @@ define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'san
           subscription.off();
         }
 
-        var chatroomReference = firebase.database().ref("/chatroom/" + roomInformation.path + "/messages/");
-        subscription = chatroomReference.on('value', function (e) {
-          logger.info("new room data:");
-          logger.info(e.val());
-          pubsub.publish("room.data.available", e.val());
+        var chatroomReference = firebase.database().ref("/chatroom/" + roomInformation.path + "/messages/").limitToLast(10);
+        chatroomReference.on('child_added', function (data) {
+          logger.info("child_added");
+          logger.info(data.val());
+          pubsub.publish("room.data.available", data.val());
         });
+        chatroomReference.on('child_changed', function (data) {
+          logger.info("child_changed");
+          logger.info(data.val());
+        });
+        chatroomReference.on('child_removed', function (data) {
+          logger.info("child_removed");
+          logger.info(data.val());
+        });
+
+        // subscription = chatroomReference.on('value', function (e) {
+        //   logger.info("new room data:");
+        //   logger.info(e.val());
+        //   pubsub.publish("room.data.available", e.val());
+        // });
 
         pubsub.publish("room.change.successful", roomInformation);
       }
@@ -126,6 +140,12 @@ define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'san
 
     logger.info("room.data.row.available data:");
     logger.info(data);
+
+    if (!data || data == null) {
+      logger.warn(data);
+      return;
+    }
+
 
     var element = document.getElementById("history");
     var id = new Date(data.utc).getTime();
