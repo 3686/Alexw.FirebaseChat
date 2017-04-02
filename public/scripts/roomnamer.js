@@ -4,7 +4,22 @@ define(['logger', 'sanity'], function (logger, sanity) {
     return self.indexOf(value) === index;
   };
 
+  var isString = function(obj) {
+    return (Object.prototype.toString.call(obj) === '[object String]');
+  };
+
   return {
+    validate: function() {
+      var names = Array.prototype.slice.call(arguments);
+      return names.every(function(element) {
+        if(isString(element)) {
+          if(element.trim().length > 0) {
+            return true;
+          }
+        }
+        return false;
+      });
+    },
     get: function () {
       var names = Array.prototype.slice.call(arguments);
       var lowercase = names.map(function (element) { return ("" + element).toLowerCase(); });

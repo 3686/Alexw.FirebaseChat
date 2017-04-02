@@ -71,43 +71,41 @@ define(['pubsub', 'config', 'querystring', 'logger', 'preferences', 'user', 'san
     logger.info("room.change.requested:");
     logger.info(roomInformation);
 
+    if(roomInformation.displayName == "") {
+      roomInformation.displayName = user.displayName;
+      roomInformation.path = roomnamer.get(user.displayName);
+    }
+
     if (roomInformation) {
-      pubsub.publish("room.change.successful", roomInformation);
-      return;
+      if (roomnamer.validate(roomInformation.displayName)) {
+
+        document.getElementById("history").innerHTML = "";
+
+        if (subscription && subscription.off) {
+          subscription.off();
+        }
+
+        var chatroomReference = firebase.database().ref("/chatroom/" + roomInformation.path + "/messages/");
+        subscription = chatroomReference.on('value', function (e) {
+          logger.info("new room data:");
+          logger.info(e.val());
+          pubsub.publish("room.data.available", e.val());
+        });
+
+        pubsub.publish("room.change.successful", roomInformation);
+      }
     }
 
     pubsub.publish("room.change.failed", roomInformation);
   });
 
   pubsub.subscribe("room.change.successful", function (roomInformation) {
-    document.getElementById("history").innerHTML = "";
+    logger.info("Room changed successfully:");
+    preferences.setRoom(roomInformation);
+    logger.info(roomInformation);
     document.getElementById("roomname").value = roomInformation.displayName;
     document.getElementById("message").focus();
-  });
-
-  pubsub.subscribe("room.change.successful", function (roomInformation) {
-    logger.info("Changing rooms:");
-    logger.info(roomInformation);
-
-    if (subscription && subscription.off) {
-      subscription.off();
-    }
-
-    var chatroomReference = firebase.database().ref("/chatroom/" + roomInformation.path + "/messages/");
-    subscription = chatroomReference.on('value', function (e) {
-      logger.info("new room data:");
-      logger.info(e.val());
-      pubsub.publish("room.data.available", e.val());
-    });
-
     logger.info("Successfully changed room");
-  });
-
-
-  pubsub.subscribe("room.change.successful", function (roomInformation) {
-    preferences.setRoom(roomInformation);
-    logger.info("Room changed successfully:");
-    logger.info(roomInformation);
   });
 
   pubsub.subscribe("room.data.available", function (data) {
