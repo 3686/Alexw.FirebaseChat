@@ -1,0 +1,46 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>Jasmine Spec Runner v2.0.0</title>
+
+  <link rel="shortcut icon" type="image/png" href="lib/jasmine-2.5.2/jasmine_favicon.png">
+  <link rel="stylesheet" type="text/css" href="lib/jasmine-2.5.2/jasmine.css">
+  <script type="text/javascript" src="../public/scripts/require.min.js"></script>
+  <script type="text/javascript">
+    // Requirejs Configuration Options
+    require.config({
+      // to set the default folder
+      baseUrl: '../public/scripts',
+      // paths: maps ids with paths (no extension)
+      paths: {
+        'jasmine': ['../../tests/lib/jasmine-2.5.2/jasmine'],
+        'jasmine-html': ['../../tests/lib/jasmine-2.5.2/jasmine-html'],
+        'jasmine-boot': ['../../tests/lib/jasmine-2.5.2/boot']
+      },
+      // shim: makes external libraries compatible with requirejs (AMD)
+      shim: {
+        'jasmine-html': {
+          deps: ['jasmine']
+        },
+        'jasmine-boot': {
+          deps: ['jasmine', 'jasmine-html']
+        }
+      }
+    });
+
+    require(['jasmine-boot'], function () {
+      require(['spec/logger.specs.js'], function () {
+        //trigger Jasmine
+        window.onload();
+      })
+    });
+  </script>
+</head>
+
+<body>
+
+</body>
+
+</html>
