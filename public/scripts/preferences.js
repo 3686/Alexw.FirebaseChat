@@ -1,39 +1,26 @@
-define(['logger', 'RoomInformation'], function (logger, RoomInformation) {
-
-  function setCookie(cname, cvalue, exdays) {
-    var d = new Date();
-    d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
-    var expires = "expires=" + d.toUTCString();
-    document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
-  }
-
-  function getCookie(cname) {
-    var name = cname + "=";
-    var ca = document.cookie.split(';');
-    for (var i = 0; i < ca.length; i++) {
-      var c = ca[i];
-      while (c.charAt(0) == ' ') {
-        c = c.substring(1);
-      }
-      if (c.indexOf(name) == 0) {
-        return c.substring(name.length, c.length);
-      }
-    }
-    return "";
-  };
+define(['logger', 'cookies', 'RoomInformation'], function (logger, cookies, RoomInformation) {
 
   return {
+
     getRoomOrDefault: function (defaultRoom) {
-      var path = getCookie('room.path');
-      var displayName = getCookie('room.displayName');
-      if(displayName && path) {
+
+      if(!defaultRoom) {
+        throw new Error("defaultRoom was null");
+      }
+
+      var path = cookies.get('room.path');
+      var displayName = cookies.get('room.displayName');
+      if (displayName && path) {
         return new RoomInformation(path, displayName);
       }
       return defaultRoom;
     },
-    setRoom: function(room) {
-      setCookie('room.displayName', room.displayName);
-      setCookie('room.path', room.path);
+    setRoom: function (room) {
+      if (!room) { 
+        throw new Error("null defaultRoom");
+      }      
+      cookies.set('room.displayName', room.displayName);
+      cookies.set('room.path', room.path);
     }
   }
 
